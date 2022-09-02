@@ -2,6 +2,7 @@ import logging
 
 import telegram
 import tweepy
+import re
 from pytz import timezone, utc
 from telegram import Bot
 from telegram.error import TelegramError
@@ -24,6 +25,18 @@ class TwitterForwarderBot(Bot):
 
     def send_tweet(self, chat, tweet):
         try:
+            # Check if chars/words exist in tweet
+            filters = (
+            '$', '#', '%', 'short', 'long', 'buy', 'sell', 'profit', 'profits', 'loss', 'losses', 'bull', 'bear',
+            'bullish', 'bearish', 'btc', 'target', 'targets', 'price', 'bottom', 'top', 'entry', 'exit', 'time',
+            'timeframe', 'support', 'resistance', 's/r', 'r/r', 'dollar', 'rejection', 'line', 'level', 'levels',
+            'pump', 'pumped', 'dump', 'dumped', 'capitulation', 'analysis', 'study', 'forecast', 'test', 'testing',
+            'tested', 'backtest', 'supply', 'demand', 'distribution', 'zone', 'zones', 'area', 'areas', 'candle',
+            'candles', 'signal', 'signals', 'uptrend', 'downtrend', 'reversal', 'reversals', 'alt', 'season', 'floor',
+            'free', 'hedge', 'pair', 'open interest', 'funding')
+
+            words = re.sub('(@|\/)\w*\d\w*', '', tweet.text)
+
             self.logger.debug("Sending tweet {} to chat {}...".format(
                 tweet.tw_id, chat.chat_id
             ))
@@ -41,12 +54,17 @@ class TwitterForwarderBot(Bot):
                 tz = timezone(chat.timezone_name)
                 created_dt = created_dt.astimezone(tz)
             created_at = created_dt.strftime('%Y-%m-%d %H:%M:%S %Z')
-            text = f"{photo_url}*{escape_markdown(tweet.name)}* • " \
-                   f"[@{tweet.screen_name}](https://twitter.com/{tweet.screen_name}):\n\n" \
+            text = f"{photo_url}*{escape_markdown(tweet.name)}* " \
+                   f"([@{tweet.screen_name}](https://twitter.com/{tweet.screen_name})):\n\n" \
                    f"{prepare_tweet_text(tweet.text)}{tweet.replied_text}\n\n" \
                    f"[View tweet](https://twitter.com/{tweet.screen_name}/status/{tweet.tw_id})"
             self.sendMessage(chat_id=-1001199638566, disable_web_page_preview=not photo_url, text=text,
                              parse_mode=telegram.ParseMode.MARKDOWN)
+
+            if (any(x in words.lower() for x in filters) or any(x.isdigit() for x in words)) and tweet.text[:1] != '@' \
+                    and tweet.text[:2] != 'RT':
+                self.sendMessage(chat_id=-1001662252448, disable_web_page_preview=not photo_url, text=text,
+                                 parse_mode=telegram.ParseMode.MARKDOWN)
 
         except TelegramError as e:
             self.logger.info("Couldn't send tweet {} to chat {}: {}".format(
