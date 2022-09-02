@@ -104,9 +104,9 @@ class FetchAndSendTweetsJob(Job):
                                        + tweet.retweeted_status.full_text)
 
                 try:
-                    rtweet = twitter_auth().get_status( tweet._json['in_reply_to_status_id'])
+                    rtweet = twitter_auth().get_status( tweet._json['in_reply_to_status_id'], tweet_mode='extended')
                     replied_text = f"\n\n*Replying to {rtweet._json['user']['name']}:*\n{rtweet.full_text}"
-                except Exception as e:
+                except:
                     replied_text = ''
 
                 self.logger.debug("- Got tweet: {}".format(tweet.full_text))
