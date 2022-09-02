@@ -8,9 +8,11 @@ from tweepy.auth import OAuthHandler
 
 db = SqliteDatabase('peewee.db', timeout=10)
 
+
 class BaseModel(Model):
     class Meta:
         database = db
+
 
 class TwitterUser(BaseModel):
     screen_name = CharField(unique=True)
@@ -77,6 +79,7 @@ class Tweet(BaseModel):
     tw_id = BigIntegerField(unique=True)
     known_at = DateTimeField(default=datetime.datetime.now)
     text = TextField()
+    replied_text = TextField()
     created_at = DateTimeField()
     twitter_user = ForeignKeyField(TwitterUser, related_name='tweets')
     photo_url = TextField(default='')
@@ -93,7 +96,6 @@ class Tweet(BaseModel):
 # Create tables
 for t in (TwitterUser, TelegramChat, Tweet, Subscription):
     t.create_table(fail_silently=True)
-
 
 # Migrate new fields. TODO: think of some better migration mechanism
 migrator = SqliteMigrator(db)

@@ -9,12 +9,14 @@ import tweepy
 from telegram.error import TelegramError
 from telegram.ext import Job
 
-from models import TwitterUser, Tweet, Subscription, db, TelegramChat
+from models import TwitterUser, Tweet, Subscription, TelegramChat
+from auth import twitter_auth
 
 INFO_CLEANUP = {
     'NOTFOUND': "Your subscription to @{} was removed because that profile doesn't exist anymore. Maybe the account's name changed?",
     'PROTECTED': "Your subscription to @{} was removed because that profile is protected and can't be fetched.",
 }
+
 
 class FetchAndSendTweetsJob(Job):
     # Twitter API rate limit parameters
@@ -94,6 +96,19 @@ class FetchAndSendTweetsJob(Job):
                 continue
 
             for tweet in tweets:
+                if 'retweeted_status' in tweet._json:
+                    tw_name = tweet.entities['user_mentions'][0]['screen_name']
+                    tweet.full_text = ("RT @"
+                                       + tw_name
+                                       + ": "
+                                       + tweet.retweeted_status.full_text)
+
+                try:
+                    rtweet = twitter_auth().get_status( tweet._json['in_reply_to_status_id'])
+                    replied_text = f"\n\n*Replying to {rtweet._json['user']['name']}:*\n{rtweet.text}"
+                except Exception as e:
+                    replied_text = ''
+
                 self.logger.debug("- Got tweet: {}".format(tweet.full_text))
 
                 # Check if tweet contains media, else check if it contains a link to an image
@@ -124,6 +139,7 @@ class FetchAndSendTweetsJob(Job):
                     'created_at': tweet.created_at,
                     'twitter_user': tw_user,
                     'photo_url': photo_url,
+                    'replied_text': replied_text,
                 }
                 try:
                     t = Tweet.get(Tweet.tw_id == tweet.id)
@@ -173,9 +189,9 @@ class FetchAndSendTweetsJob(Job):
             if s.tw_user.last_tweet_id > s.last_tweet_id:
                 self.logger.debug("- Some fresh tweets here!")
                 for tw in (s.tw_user.tweets.select()
-                                    .where(Tweet.tw_id > s.last_tweet_id)
-                                    .order_by(Tweet.tw_id.asc())
-                           ):
+                        .where(Tweet.tw_id > s.last_tweet_id)
+                        .order_by(Tweet.tw_id.asc())
+                ):
                     bot.send_tweet(s.tg_chat, tw)
 
                 # save the latest tweet sent on this subscription
@@ -184,7 +200,6 @@ class FetchAndSendTweetsJob(Job):
                 continue
 
             self.logger.debug("- No new tweets here.")
-
 
         self.logger.debug("Starting tw_user cleanup")
         if not users_to_cleanup:
@@ -197,10 +212,10 @@ class FetchAndSendTweetsJob(Job):
                 for s in subs:
                     chat = s.tg_chat
                     if chat.delete_soon:
-                        self.logger.debug ("- - skipping because of delete_soon chatid={}".format(chat_id))
+                        self.logger.debug("- - skipping because of delete_soon chatid={}".format(chat_id))
                         continue
                     chat_id = chat.chat_id
-                    self.logger.debug ("- - bye on chatid={}".format(chat_id))
+                    self.logger.debug("- - bye on chatid={}".format(chat_id))
                     s.delete_instance()
 
                     try:
@@ -226,7 +241,7 @@ class FetchAndSendTweetsJob(Job):
             self.logger.debug("- Cleaning up TwitterUser @{}".format(tw_user.screen_name, reason))
             tw_user.delete_instance()
 
-            self.logger.debug ("- Cleanup finished")
+            self.logger.debug("- Cleanup finished")
 
         self.logger.debug("Cleaning up TelegramChats marked for deletion")
         for chat in TelegramChat.select().where(TelegramChat.delete_soon == True):
