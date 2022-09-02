@@ -6,6 +6,8 @@ from util import with_touched_chat, escape_markdown, markdown_twitter_usernames
 
 allowed_ids = [441985603, 311991287]
 
+table_id = 1
+
 
 def cmd_ping(bot, update):
     bot.reply(update, 'Pong!')
@@ -51,32 +53,32 @@ def cmd_sub(bot, update, args, chat=None):
 
             if Subscription.select().where(
                     Subscription.tw_user == tw_user,
-                    Subscription.tg_chat == chat).count() == 1:
+                    Subscription.tg_chat == table_id).count() == 1:
                 already_subscribed.append(tw_user.full_name)
                 continue
 
-            Subscription.create(tg_chat=chat, tw_user=tw_user)
+            Subscription.create(tg_chat=table_id, tw_user=tw_user)
             successfully_subscribed.append(tw_user.full_name)
 
         reply = ""
 
         if len(not_found) != 0:
-            reply += "Sorry, I didn't find username{} {}\n\n".format(
+            reply += "❌ I didn't find username{} {}\n\n".format(
                 "" if len(not_found) == 1 else "s",
                 ", ".join(not_found)
             )
 
         if len(already_subscribed) != 0:
-            reply += "You're already subscribed to {}\n\n".format(
+            reply += "ℹ️ You're already subscribed to `{}`\n\n".format(
                 ", ".join(already_subscribed)
             )
 
         if len(successfully_subscribed) != 0:
-            reply += "I've added your subscription to {}".format(
+            reply += "✅ I've added your subscription to: `{}`".format(
                 ", ".join(successfully_subscribed)
             )
-
-        bot.reply(update, reply)
+        for user in allowed_ids:
+            bot.sendMessage(user, reply, parse_mode=telegram.ParseMode.MARKDOWN)
     else:
         pass
 
@@ -85,7 +87,7 @@ def cmd_sub(bot, update, args, chat=None):
 def cmd_unsub(bot, update, args, chat=None):
     if update.message.chat_id in allowed_ids:
         if len(args) < 1:
-            bot.reply(update, "Use /unsub username1 username2 username3 ...")
+            bot.reply(update, "`Use /unsub username1 username2 username3 ...`", parse_mode=telegram.ParseMode.MARKDOWN)
             return
         tw_usernames = args
         not_found = []
@@ -96,29 +98,29 @@ def cmd_unsub(bot, update, args, chat=None):
 
             if tw_user is None or Subscription.select().where(
                     Subscription.tw_user == tw_user,
-                    Subscription.tg_chat == chat).count() == 0:
+                    Subscription.tg_chat == table_id).count() == 0:
                 not_found.append(tw_username)
                 continue
 
             Subscription.delete().where(
                 Subscription.tw_user == tw_user,
-                Subscription.tg_chat == chat).execute()
+                Subscription.tg_chat == table_id).execute()
 
             successfully_unsubscribed.append(tw_user.full_name)
 
         reply = ""
 
         if len(not_found) != 0:
-            reply += "I didn't find any subscription to {}\n\n".format(
+            reply += "ℹ️ I didn't find any subscription to `{}`\n\n".format(
                 ", ".join(not_found)
             )
 
         if len(successfully_unsubscribed) != 0:
-            reply += "You are no longer subscribed to {}".format(
+            reply += "🗑 You are no longer subscribed to `{}`".format(
                 ", ".join(successfully_unsubscribed)
             )
-
-        bot.reply(update, reply)
+        for user in allowed_ids:
+            bot.sendMessage(user, reply, parse_mode=telegram.ParseMode.MARKDOWN)
     else:
         pass
 
@@ -127,21 +129,22 @@ def cmd_unsub(bot, update, args, chat=None):
 def cmd_list(bot, update, chat=None):
     if update.message.chat_id in allowed_ids:
         subscriptions = list(Subscription.select().where(
-            Subscription.tg_chat == chat))
+            Subscription.tg_chat == table_id))
 
         if len(subscriptions) == 0:
             return bot.reply(update, 'You have no subscriptions yet! Add one with /sub username')
 
         subs = ['']
         for sub in subscriptions:
-            subs.append(sub.tw_user.full_name)
+            subs.append(f"`{sub.tw_user.full_name}`")
 
         subject = "This group is" if chat.is_group else "You are"
 
         bot.reply(
             update,
             subject + " subscribed to the following Twitter users:\n" +
-            "\n - ".join(subs) + "\n\nYou can remove any of them using /unsub username")
+            "\n • ".join(subs) + "\n\nYou can remove any of them using /unsub username"
+            , parse_mode=telegram.ParseMode.MARKDOWN)
     else:
         pass
 
@@ -150,7 +153,7 @@ def cmd_list(bot, update, chat=None):
 def cmd_export(bot, update, chat=None):
     if update.message.chat_id in allowed_ids:
         subscriptions = list(Subscription.select().where(
-            Subscription.tg_chat == chat))
+            Subscription.tg_chat == table_id))
 
         if len(subscriptions) == 0:
             return bot.reply(update, 'You have no subscriptions yet! Add one with /sub username')
@@ -170,9 +173,9 @@ def cmd_export(bot, update, chat=None):
 
 @with_touched_chat
 def cmd_wipe(bot, update, chat=None):
-    if update.message.chat_id in allowed_ids:
+    if update.message.chat_id == 441985603:
         subscriptions = list(Subscription.select().where(
-            Subscription.tg_chat == chat))
+            Subscription.tg_chat == table_id))
 
         subs = "You had no subscriptions."
         if subscriptions:
@@ -192,7 +195,7 @@ def cmd_wipe(bot, update, chat=None):
 def cmd_all(bot, update, chat=None):
     if update.message.chat_id in allowed_ids:
         subscriptions = list(Subscription.select().where(
-            Subscription.tg_chat == chat))
+            Subscription.tg_chat == table_id))
 
         if len(subscriptions) == 0:
             return bot.reply(update, 'You have no subscriptions, so no tweets to show!')
