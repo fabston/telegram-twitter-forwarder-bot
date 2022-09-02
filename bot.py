@@ -27,13 +27,14 @@ class TwitterForwarderBot(Bot):
         try:
             # Check if chars/words exist in tweet
             filters = (
-            '$', '#', '%', 'short', 'long', 'buy', 'sell', 'profit', 'profits', 'loss', 'losses', 'bull', 'bear',
-            'bullish', 'bearish', 'btc', 'target', 'targets', 'price', 'bottom', 'top', 'entry', 'exit', 'time',
-            'timeframe', 'support', 'resistance', 's/r', 'r/r', 'dollar', 'rejection', 'line', 'level', 'levels',
-            'pump', 'pumped', 'dump', 'dumped', 'capitulation', 'analysis', 'study', 'forecast', 'test', 'testing',
-            'tested', 'backtest', 'supply', 'demand', 'distribution', 'zone', 'zones', 'area', 'areas', 'candle',
-            'candles', 'signal', 'signals', 'uptrend', 'downtrend', 'reversal', 'reversals', 'alt', 'season', 'floor',
-            'free', 'hedge', 'pair', 'open interest', 'funding')
+                '$', '#', '%', 'short', 'long', 'buy', 'sell', 'profit', 'profits', 'loss', 'losses', 'bull', 'bear',
+                'bullish', 'bearish', 'btc', 'target', 'targets', 'price', 'bottom', 'top', 'entry', 'exit', 'time',
+                'timeframe', 'support', 'resistance', 's/r', 'r/r', 'dollar', 'rejection', 'line', 'level', 'levels',
+                'pump', 'pumped', 'dump', 'dumped', 'capitulation', 'analysis', 'study', 'forecast', 'test', 'testing',
+                'tested', 'backtest', 'supply', 'demand', 'distribution', 'zone', 'zones', 'area', 'areas', 'candle',
+                'candles', 'signal', 'signals', 'uptrend', 'downtrend', 'reversal', 'reversals', 'alt', 'season',
+                'floor',
+                'free', 'hedge', 'pair', 'open interest', 'funding')
 
             words = re.sub('(@|\/)\w*\d\w*', '', tweet.text)
 
@@ -58,12 +59,12 @@ class TwitterForwarderBot(Bot):
                    f"([@{tweet.screen_name}](https://twitter.com/{tweet.screen_name})):\n\n" \
                    f"{prepare_tweet_text(tweet.text)}{tweet.replied_text}\n\n" \
                    f"[View tweet](https://twitter.com/{tweet.screen_name}/status/{tweet.tw_id})"
-            self.sendMessage(chat_id=-1001199638566, disable_web_page_preview=not photo_url, text=text,
-                             parse_mode=telegram.ParseMode.MARKDOWN)
 
-            if (any(x in words.lower() for x in filters) or any(x.isdigit() for x in words)) and tweet.text[:1] != '@' \
-                    and tweet.text[:2] != 'RT':
+            if any(x in words.lower() for x in filters) and tweet.text[:1] != '@' and tweet.text[:2] != 'RT':
                 self.sendMessage(chat_id=-1001662252448, disable_web_page_preview=not photo_url, text=text,
+                                 parse_mode=telegram.ParseMode.MARKDOWN)
+            else:
+                self.sendMessage(chat_id=-1001199638566, disable_web_page_preview=not photo_url, text=text,
                                  parse_mode=telegram.ParseMode.MARKDOWN)
 
         except TelegramError as e:
