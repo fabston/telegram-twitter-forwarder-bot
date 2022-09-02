@@ -105,7 +105,7 @@ class FetchAndSendTweetsJob(Job):
 
                 try:
                     rtweet = twitter_auth().get_status( tweet._json['in_reply_to_status_id'])
-                    replied_text = f"\n\n*Replying to {rtweet._json['user']['name']}:*\n{rtweet.text}"
+                    replied_text = f"\n\n*Replying to {rtweet._json['user']['name']}:*\n{rtweet.full_text}"
                 except Exception as e:
                     replied_text = ''
 
