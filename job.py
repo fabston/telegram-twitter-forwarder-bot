@@ -13,8 +13,8 @@ from models import TwitterUser, Tweet, Subscription, TelegramChat
 from auth import twitter_auth
 
 INFO_CLEANUP = {
-    'NOTFOUND': "Your subscription to @{} was removed because that profile doesn't exist anymore. Maybe the account's name changed?",
-    'PROTECTED': "Your subscription to @{} was removed because that profile is protected and can't be fetched.",
+    'NOTFOUND': "ℹ️ Your subscription to `{}` was removed because that profile doesn't exist anymore. Maybe the account's name changed?",
+    'PROTECTED': "ℹ️ Your subscription to `{}` was removed because that profile is protected and can't be fetched.",
 }
 
 
